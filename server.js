@@ -1,3 +1,13 @@
+
+
+var mysql = require('mysql');
+var connection = mysql.createConnection({
+host: 'localhost',
+user: 'root',
+password: '',
+database: 'chatDB'
+});
+
 var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
@@ -8,9 +18,19 @@ connections = [];
 server.listen(process.env.PORT || 3000);
 console.log('Server running...');
 
+connection.connect(function(error){
+	if(error){
+		console.log('Error: '+ error.stack);
+		return;
+	}
+	console.log('Connection Established');
+});
+
+
 app.get('/', function(req, res){
 	res.sendFile(__dirname + '/index.html');
 });
+
 
 io.sockets.on('connection', function(socket){
 	connections.push(socket);
@@ -27,6 +47,16 @@ io.sockets.on('connection', function(socket){
 	//Send Message
 	socket.on('send message', function(data){
 		io.sockets.emit('new message', {msg: data, user: socket.username});
+
+
+		connection.query('INSERT into chat set?', {msg: data, from_user: socket.username}, function(error, result){
+			if(error){
+				console.log('Error: '+ error.stack);
+				return;
+			}
+			console.log('Query Successful');
+		});
+
 	});
 
 	//New User
@@ -35,9 +65,16 @@ io.sockets.on('connection', function(socket){
 		socket.username = data;
 		users.push(socket.username);	
 		updateUsernames();
+
+		});
+	
 	});
 
 	function updateUsernames(){
 		io.sockets.emit('get users', users);
 	}
-});
+
+	
+
+
+
